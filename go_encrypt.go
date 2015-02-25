@@ -6,49 +6,51 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		panic("not enough arguments")
+
+	var (
+		key string
+		textin string
+		decrypt bool
+	)
+
+	flag.BoolVar(&decrypt, "d", false, "Set to decrypt text")
+	flag.StringVar(&key, "k", "", "16, 24, or 32 characters")
+	flag.StringVar(&textin, "t", "", "Not empty string")
+	flag.Parse()
+
+	keyLength := len(key)
+	switch {
+	case keyLength != 16 && keyLength != 24 && keyLength != 32:
+		fallthrough
+	case len(textin) == 0:
+		flag.Usage()
+		os.Exit(2)
 	}
 
-	if os.Args[1] == "-d" {
-		decrypt(os.Args[2:])
+	var (
+		err error
+		textout string
+	)
+
+	if decrypt {
+		textout, err = DecryptStr_AES_CBC(textin, key)
 	} else {
-		encrypt(os.Args[1:])
+		textout, err = EncryptStr_AES_CBC(textin, key)
 	}
-}
 
-func decrypt(args []string) {
-	if len(args) < 2 {
-		panic("not enough arguments")
-	}
-	key := args[0]
-	encrypted := args[1]
-
-	decrypted, err := DecryptStr_AES_CBC(encrypted, key)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
-	fmt.Println(decrypted)
-}
 
-func encrypt(args []string) {
-	if len(args) < 2 {
-		panic("not enough arguments")
-	}
-	key := args[0]
-	original := args[1]
-
-	encrypted, err := EncryptStr_AES_CBC(original, key)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(encrypted)
+	fmt.Println(textout)
 }
 
 //------------------------------------------------------------
